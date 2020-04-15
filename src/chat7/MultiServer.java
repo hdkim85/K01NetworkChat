@@ -151,7 +151,7 @@ public class MultiServer{
 				
 				for(String block : blockArr) {
 					
-					if(name1.equals(block)) {
+					if(name.equals(block)) {
 						cnt++;
 					}
 				}
