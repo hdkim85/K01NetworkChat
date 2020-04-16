@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 
-public class MultiServer{
+public class MultiServer2{
 	Connection conn;
 	PreparedStatement ps;
 	ResultSet rs;
@@ -37,11 +37,11 @@ public class MultiServer{
 	static ServerSocket serverSocket = null;
 	static Socket socket = null;
 	Map<String, PrintWriter> clientMap;
-	Map<String, ArrayList<String>> roomMap = new HashMap<String, ArrayList<String>>();
+	Map<String, ArrayList<String>> roomMap;
 	HashSet<String> chatRoom = new HashSet<String>();
 		
 	//생성자
-	public MultiServer() {
+	public MultiServer2() {
 		
 		//클라이언트의 이름과 출력스트림을 저장할 HashMap생성
 		clientMap = new HashMap<String, PrintWriter>();
@@ -91,7 +91,7 @@ public class MultiServer{
 	//메인메소드 : Server객체를 생성한 후 초기화한다.
 	public static void main(String[] args) {
 		
-		MultiServer ms = new MultiServer();
+		MultiServer2 ms = new MultiServer2();
 		ms.init();	
 		
 	}
@@ -164,21 +164,17 @@ public class MultiServer{
 				
 				while(in!=null) {
 					
-					out.println(utf8("대화방 목록입니다."));
-					showRoomList();
-					out.println(utf8("대화방 개설 : /mk 방제목, 대화방 입장 : /in 방제목"));
-					
 					s = in.readLine();					
 					s = URLDecoder.decode(s, "UTF-8");		
-//					System.out.println(s);
+					System.out.println(s);
 					
-					String sql = String.format("insert into chatting_tb values(seq_chat_num.nextval, '%s', '%s', sysdate)", name, s);													
+					String sql = String.format("insert into chatting_tb values(seq_chat_num.nextval, %s, %s, sysdate)", name, s);													
 					sqlUp(sql);
 					
 					if(s==null)
 						break;
-					
-//					s = checkBw(name, s);
+
+					s = checkBw(name, s);
 					
 					//s를 Tokenizer 하여 명령어 부분과 받는사람 부분으로 분리한다.
 					StringTokenizer str = new StringTokenizer(s);
@@ -192,18 +188,10 @@ public class MultiServer{
 							out.println("/to 대화명 메세지 : 귓속말");
 							out.println("/to 대화명 : 귓속말 고정");
 							out.println("/bw 단어 : 금칙어 입력(단어)");
-							break;
+						
 						case "/list":
 							list();
 							break;
-							
-						case "/mk":
-							String roomName = str.nextToken();
-							openRoom(roomName);
-							entRoom(roomName);
-							break;
-						case "/in":
-							entRoom(str.nextToken());
 						case "/to":
 							String to_name="";
 							to_name = str.nextToken();
@@ -225,17 +213,15 @@ public class MultiServer{
 										whisper(msg, to_name);
 									}
 									else {
-										boolean flag2 = true;
-										while(flag2==true) {
+										while(true) {
+											
 											out.println(utf8("귓속말 모드로 대화합니다. 그만하려면 '/q' 를 입력하세요"));
-											String msg = in.readLine();
-											msg = URLDecoder.decode(msg, "UTF-8");
-											System.out.println(name+">>"+ to_name + msg);
-											if(msg.equals("/q")) flag2=false;
-											//듣는사람의 리스트에 금칙어는 모두 *로 표시
-											checkBw(to_name, msg);
+											String msg = in.readLine() ;
+											if(msg.equals("/q")) break;
+											
 											whisper(msg, to_name);
-										}
+										
+										}							
 									}
 								}
 							}
@@ -250,9 +236,11 @@ public class MultiServer{
 							String block_name = str.nextToken();
 							block(block_name);
 							break;
+						default:
+							break;
 						case "/bw":
 							setBadWord(name, str.nextToken());
-						default:
+							
 							break;
 						}
 						
@@ -383,10 +371,6 @@ public class MultiServer{
 					
 					//flag가 둘 중에 하나에라도 해당되면 송출 X
 					
-					//내 Bw에 있는 단어는 모두 *로 처리
-					msg = checkBw(name1, msg);
-					
-					
 					if(flag1==false && flag2==false) {
 						it_out.println(URLEncoder.encode("[" + name + "]:" + msg, "UTF-8"));
 					}
@@ -411,7 +395,76 @@ public class MultiServer{
 				
 			}
 		}
+		
+		
+		public void serverFunc(String cmd) {
+			
+			String[] cmdArr = cmd.split(" ");
+			
+			showArr(cmdArr);
+			
+			switch (cmdArr[0].toLowerCase()) {
+			case "/help" :
+				System.out.println("/bword : 금칙어 설정");
+				break;
+			case "/bword" :
+				
+				while(true) {
+					
+					System.out.println("금칙어 설정 메뉴");
+					System.out.println("/setbword : 금칙어 추가");
+					System.out.println("/delbword : 금칙어 삭제");
+					System.out.println("/bwlist : 금칙어 보기");
+					System.out.println("/u : 상위메뉴");
 
+					String bwChoice = scan.nextLine();
+					
+					String[] bwCArr = bwChoice.split(" ");
+					
+					showArr(bwCArr);
+					
+					if(bwCArr[0].equals("/u")) break;
+					
+					switch(bwCArr[0]) {
+					case "/setbword":
+						if(bwCArr.length>2) {
+							System.out.println("하나의 단어만 입력할 수 있습니다.");
+						}
+						else {
+							setBadWord("admin", bwCArr[1]);
+						}
+						break;
+					case "/delword" :
+						if(bwCArr.length>2) {
+							System.out.println("하나의 단어만 입력할 수 있습니다.");
+						}
+						else {
+							delBadWord("admin", bwCArr[1]);
+						}
+						break;
+					case "/bwlist":
+						listBadWord("admin");
+						break;
+					default:
+						break;
+					}
+					
+				}
+					
+			default:
+				break;
+			}
+		}
+		
+		//ServerFunction은 만들었는데 어떻게 적용해야하지?
+		public void serverMenu() {
+			
+			System.out.println("명령어를 입력하세요. 명령어를 검색하려면 '/help' 를 입력하세요");
+			System.out.print(">>");
+			String cmd = scan.nextLine();
+			serverFunc(cmd);
+		}
+		
 		
 		public void setBadWord(String name, String word) {
 			
@@ -459,7 +512,7 @@ public class MultiServer{
 					String sequence = rs.getString(1);
 					String user = rs.getString(2);
 					String word = rs.getString(3);
-					out.printf("%-3s | %-10s | %-10s", sequence, user, word);
+					System.out.printf("%-3s | %-10s | %-10s", sequence, user, word);
 				}
 				
 				
@@ -478,39 +531,36 @@ public class MultiServer{
 				ArrayList<String> userBw = new ArrayList<String>();
 				
 				//admin금칙어 체크
-//				ps = conn.prepareStatement(sql);
-//				ps.setString(1, "admin");
-//				rs = ps.executeQuery();
-//				while(rs.next()) {
-//					String word = rs.getString(1);
-//					if(sentence.contains(word)) {
-//						String rep = "";
-//						for(int i=0; i<word.length(); i++) {
-//							rep +="*";
-//						}
-//						sentence = sentence.replace(word, rep);
-//						System.out.println("대체문장 관리자 : " + sentence);
-//					}
-//				}
+				ps = conn.prepareStatement(sql);
+				ps.setString(1, "admin");
+				rs = ps.executeQuery();
+				while(rs.next()) {
+					String word = rs.getString(1);
+					if(sentence.contains(word)) {
+						String rep = "";
+						for(int i=0; i<word.length(); i++) {
+							rep +="*";
+						}
+						sentence = sentence.replace(word, rep);
+						System.out.println("대체문장 관리자 : " + sentence);
+					}
+				}
 				
 				//user금칙어 체크
 				ps = conn.prepareStatement(sql);
 				ps.setString(1, name);
 				rs = ps.executeQuery();
-				if(rs!=null) {
-					while(rs.next()) {
-						String word = rs.getString(1);
-						if(sentence.contains(word)) {
-							String rep = "";
-							for(int i=0; i<word.length(); i++) {
-								rep +="♡욕♥";
-							}
-							sentence = sentence.replace(word, rep);
+				while(rs.next()) {
+					String word = rs.getString(1);
+					if(sentence.contains(word)) {
+						String rep = "";
+						for(int i=0; i<word.length(); i++) {
+							rep +="*";
 						}
+						sentence = sentence.replace(word, rep);
+						System.out.println("대체문장 user : " + sentence);
 					}
-					
 				}
-				
 				
 				return sentence;
 				
@@ -532,12 +582,13 @@ public class MultiServer{
 							(PrintWriter)clientMap.get(find_name);
 					
 					if(to.equals(find_name)) {
-						it_out.println(utf8("[" + name + "님의 귓속말]:" + str));
+						
+						it_out.println(URLEncoder.encode("[" + name + "님의 귓속말]:" + str,"UTF-8"));
 					}
 				}			
-//				catch (UnsupportedEncodingException e) {
-//					e.printStackTrace();
-//				} 			
+				catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				} 			
 				catch (Exception e) {
 					System.out.println("예외4:" + e);
 				}
@@ -579,21 +630,20 @@ public class MultiServer{
 		//대화방 : 대화명 형태의 map을 만들어서 iterator로 대화 하도록?
 		//대화방 map에서 대화명 찾아서 해당 대화명 printwriter 찾아 대화하는 형태?
 		
-		public void openRoom(String roomName) throws IOException {
+		public void openRoom(String roomName) throws UnsupportedEncodingException {
 			chatRoom.add(roomName);
+			
 			ArrayList<String> roomN = new ArrayList<String>();
-			roomN.add(name);
+			roomN.add(roomName);
 			roomMap.put(roomName, roomN);
+			
 			out.println(utf8("채팅방을 개설하였습니다."));
 			//DB를 이용하자.
-			String sql = String.format("update chatting_user_tb set chatroom = '%s' where name = '%s'", roomName, name) ;
+			String sql = String.format("update chatting_user_tb set chatroom = %s where name = %s", roomName, name) ;
 			sqlUp(sql);
-			
-			String order = in.readLine();
-			System.out.println("7");
 		}
 		
-		public void entRoom(String roomName) throws IOException {
+		public void entRoom(String roomName) {
 			
 			Iterator<String> it = roomMap.keySet().iterator();
 			
@@ -602,42 +652,13 @@ public class MultiServer{
 				if(targetRoom.equals(roomName)) {
 					ArrayList<String> room = roomMap.get(targetRoom);
 					room.add(name);
-					String sql =String.format("update chatting_user_tb set chatroom = '%s' where name = '%s'", roomName, name) ;
+					String sql =String.format("update chatting_user_tb set chatroom = %s where name = %s", roomName, name) ;
 					sqlUp(sql);
 				}
 			}
-			out.println(utf8("채팅방에서 나가려면 /q를 입력하세요"));
-			String chat = in.readLine();
-			while(!chat.equals("/q")) {
-				roomChat(roomName, chat);
-			}
-			exitRoom(roomName);
 		}
 		
-		public void entRoom(String admin, String roomName) throws IOException {
 
-			Iterator<String> it = roomMap.keySet().iterator();
-
-			while(it.hasNext()) {
-				String targetRoom = it.next();
-				if(targetRoom.equals(roomName)) {
-					ArrayList<String> room = roomMap.get(targetRoom);
-					room.add(name);
-					String sql =String.format("update chatting_user_tb set chatroom = '%s' where name = '%s'", roomName, name) ;
-					sqlUp(sql);
-				}
-			}
-			out.println(utf8("채팅방에서 나가려면 /q를 입력하세요"));
-			String chat = in.readLine();
-			
-			
-			
-			while(!chat.equals("/q")) {
-				roomChat(roomName, chat);
-			}
-			exitRoom(roomName);
-		}
-		
 		public void sqlUp(String sql) {
 			try {
 				st = conn.createStatement();
@@ -666,7 +687,7 @@ public class MultiServer{
 			//roomMem.keySet은 방들의 roomName임
 			Iterator<String> it2 = roomMap.keySet().iterator();
 			
-			String sql = String.format("select chatroom from chattting_user_tb where name = '%s'", name);
+			String sql = String.format("select chatroom from chattting_user_tb where name = %s", name);
 			String myRoom ="";
 			
 			try {
@@ -679,7 +700,7 @@ public class MultiServer{
 				
 			} catch (SQLException e) {
 				e.printStackTrace();
-				out.println("내 대화방을 찾지 못하였습니다.");
+				out.println("대화 전송에 실패하였습니다.");
 			}
 			
 			return myRoom;
@@ -719,7 +740,7 @@ public class MultiServer{
 					ArrayList<String> room = roomMap.get(targetRoom);
 					//room 안의 멤버들에게 전송만 하면 됨
 					room.remove(name);
-					String msg = String.format("'%s'님께서 퇴장하셨습니다.", name);
+					String msg = String.format("%s님께서 퇴장하셨습니다.", name);
 					sendAllMsg(name, msg);
 				}
 			}
@@ -733,11 +754,9 @@ public class MultiServer{
 		
 		public void showRoomList() {
 			
-			if(roomMap!=null) {
-				Iterator<String> it = roomMap.keySet().iterator();
-				while(it.hasNext()) {
-					out.println(it.next());
-				}
+			Iterator<String> it = roomMap.keySet().iterator();
+			while(it.hasNext()) {
+				out.println(it.next());
 			}
 		}
 		
